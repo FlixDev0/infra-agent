@@ -1,0 +1,47 @@
+version: "1.0"
+environment: "staging"
+
+services:
+  - name: "api-backend"
+    type: "container"
+    image: "myapp:latest"
+    replicas: 2
+    ports:
+      - host: 8080
+        container: 80
+    env:
+      DATABASE_URL: "postgres://db:5432/mydb"
+      DEBUG: "false"
+    resources:
+      cpu_limit: "0.5"
+      memory_limit: "512m"
+    health_check:
+      endpoint: "/health"
+      interval_seconds: 30
+      timeout_seconds: 5
+      unhealthy_threshold: 3
+    restart_policy: "always"
+    tags:
+      team: "backend"
+      criticality: "high"
+
+  - name: "worker-queue"
+    type: "container"
+    image: "myworker:1.2"
+    replicas: 1
+    ports: []
+    env:
+      QUEUE_URL: "redis://cache:6379"
+    resources:
+      cpu_limit: "0.25"
+      memory_limit: "256m"
+    restart_policy: "on-failure"
+    tags:
+      team: "backend"
+      criticality: "medium"
+
+policies:
+  allow_unknown_containers: false
+  max_remediation_attempts: 3
+  remediation_cooldown_seconds: 60
+  dry_run: true   # cambiar a false para activar remediación real

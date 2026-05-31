@@ -1,0 +1,2 @@
+FROM python:3.11-slim
+CMD ["python", "-c", "import time; print('worker running'); [time.sleep(10) or print('tick') for _ in iter(int, 1)]"]

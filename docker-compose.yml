@@ -1,0 +1,51 @@
+version: "3.9"
+
+services:
+  # Servicios dummy para simular infraestructura real
+  api-backend:
+    build:
+      context: ./docker/dummy
+      dockerfile: Dockerfile.api
+    container_name: api-backend
+    ports:
+      - "8080:80"
+    environment:
+      DEBUG: "false"
+      PORT: "80"
+
+  worker-queue:
+    build:
+      context: ./docker/dummy
+      dockerfile: Dockerfile.worker
+    container_name: worker-queue
+    environment:
+      QUEUE_URL: "redis://cache:6379"
+
+  # El agente
+  infra-agent:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: infra-agent
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config:/app/config
+      - ./logs:/app/logs
+    environment:
+      DESIRED_STATE_PATH: "/app/config/desired_state.yaml"
+      AGENT_INTERVAL: "30"
+    depends_on:
+      - api-backend
+      - worker-queue
+
+  # API del agente
+  infra-api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: infra-api
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./logs:/app/logs
