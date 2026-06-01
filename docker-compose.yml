@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   # Servicios dummy para simular infraestructura real
   api-backend:
