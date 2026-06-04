@@ -4,6 +4,7 @@ Implementa el patrón observe → diff → remediate en ciclos continuos.
 """
 import asyncio
 import time
+import math
 from datetime import datetime
 
 from models.desired_state import DesiredState
@@ -45,7 +46,12 @@ class AgentLoop:
             await asyncio.sleep(self.interval)
 
     async def _tick(self):
-        snapshot = await self.observer.observe()
+        try:
+            snapshot = await self.observer.observe()
+        except Exception as e:
+            print(f"[agent] ERROR observando infraestructura: {e}")
+            return
+
         events = self.engine.compute(self.desired, snapshot)
 
         if not events:
@@ -61,16 +67,21 @@ class AgentLoop:
         policies = self.desired.policies
 
         attempts = self._remediation_attempts.get(key, 0)
+
+        # Límite de intentos
         if attempts >= policies.max_remediation_attempts:
-            print(f"[agent] SKIP — '{key}' alcanzó el límite de {policies.max_remediation_attempts} intentos")
+            print(f"[agent] LIMITE — '{key}' alcanzó {policies.max_remediation_attempts} intentos, requiere intervención manual")
             self.logger.log(drift, RemediationResult.SKIPPED, attempts, 0)
             return
 
+        # Cooldown con backoff exponencial
         last = self._last_remediation.get(key)
         if last:
+            backoff = policies.remediation_cooldown_seconds * (2 ** attempts)
             elapsed = (datetime.utcnow() - last).total_seconds()
-            if elapsed < policies.remediation_cooldown_seconds:
-                print(f"[agent] COOLDOWN — '{key}' esperando {policies.remediation_cooldown_seconds - elapsed:.0f}s más")
+            if elapsed < backoff:
+                remaining = int(backoff - elapsed)
+                print(f"[agent] COOLDOWN — '{key}' esperando {remaining}s (intento {attempts})")
                 return
 
         if policies.dry_run:
@@ -93,5 +104,7 @@ class AgentLoop:
             print(f"[agent] OK — {drift.remediation_action} ({duration_ms}ms)")
         except Exception as e:
             duration_ms = int((time.monotonic() - start) * 1000)
+            self._remediation_attempts[key] = attempts + 1
+            self._last_remediation[key] = datetime.utcnow()
             self.logger.log(drift, RemediationResult.FAILED, attempts + 1, duration_ms, str(e))
             print(f"[agent] ERROR — {drift.remediation_action}: {e}")
