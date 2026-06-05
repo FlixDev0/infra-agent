@@ -50,10 +50,6 @@ class AgentLoop:
         except Exception as e:
             print(f"[agent] ERROR observando infraestructura: {e}")
             return
-<<<<<<< HEAD
-=======
-
->>>>>>> develop
         events = self.engine.compute(self.desired, snapshot)
         agent_state.update_tick(events)
 
