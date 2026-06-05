@@ -32,7 +32,7 @@ class AuditLogger:
             error_message=error_message,
             executed_at=datetime.utcnow(),
         )
-        with open(self.log_path, "a") as f:
+        with open(self.log_path, "a", encoding="utf-8") as f:
             f.write(entry.model_dump_json() + "\n")
         return entry
 
@@ -40,7 +40,7 @@ class AuditLogger:
         if not self.log_path.exists():
             return []
         entries = []
-        with open(self.log_path) as f:
+        with open(self.log_path, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if line:

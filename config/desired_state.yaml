@@ -1,4 +1,4 @@
-version: str = "1.0"
+version: "1.0"
 environment: staging
 
 services:
@@ -11,9 +11,6 @@ services:
         container: 80
     env: {}
     restart_policy: always
-    tags:
-      team: backend
-      criticality: high
 
   - name: worker-queue
     type: container
@@ -22,12 +19,9 @@ services:
     ports: []
     env: {}
     restart_policy: on-failure
-    tags:
-      team: backend
-      criticality: medium
 
 policies:
   allow_unknown_containers: false
   max_remediation_attempts: 3
   remediation_cooldown_seconds: 60
-  dry_run: true
+  dry_run: false
