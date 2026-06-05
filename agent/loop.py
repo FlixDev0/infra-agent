@@ -14,15 +14,11 @@ from agent.observer.base import BaseObserver
 from agent.diff.engine import DiffEngine
 from agent.remediator.registry import get_handler
 from agent.audit.logger import AuditLogger
+from agent.state import agent_state
 
 
 class AgentLoop:
-    def __init__(
-        self,
-        desired: DesiredState,
-        observer: BaseObserver,
-        interval_seconds: int = 30,
-    ):
+    def __init__(self, desired, observer, interval_seconds=30):
         self.desired = desired
         self.observer = observer
         self.interval = interval_seconds
@@ -31,6 +27,9 @@ class AgentLoop:
         self._running = False
         self._remediation_attempts: dict[str, int] = {}
         self._last_remediation: dict[str, datetime] = {}
+        agent_state.running = True
+        agent_state.dry_run = desired.policies.dry_run
+        agent_state.interval_seconds = interval_seconds
 
     def start(self):
         self._running = True
@@ -51,8 +50,12 @@ class AgentLoop:
         except Exception as e:
             print(f"[agent] ERROR observando infraestructura: {e}")
             return
+<<<<<<< HEAD
+=======
 
+>>>>>>> develop
         events = self.engine.compute(self.desired, snapshot)
+        agent_state.update_tick(events)
 
         if not events:
             print(f"[agent] {datetime.utcnow().isoformat()} — Sin desviaciones detectadas")
@@ -102,6 +105,7 @@ class AgentLoop:
             self._last_remediation[key] = datetime.utcnow()
             self.logger.log(drift, RemediationResult.SUCCESS, attempts + 1, duration_ms)
             print(f"[agent] OK — {drift.remediation_action} ({duration_ms}ms)")
+            agent_state.total_remediations += 1
         except Exception as e:
             duration_ms = int((time.monotonic() - start) * 1000)
             self._remediation_attempts[key] = attempts + 1
